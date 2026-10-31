@@ -1,0 +1,20 @@
+{
+  "id": "reducer_conflict",
+  "title": "Duct reducer - conflicting units, missing thickness",
+  "kind": "conflict",
+  "shape_hint": "reducer",
+  "description": "FICTIONAL DEMO. Reducer 850 mm down to 60 cm, height 45 cm. Flange both ends. No thickness on sketch.",
+  "drawing": "reducer_conflict.png",
+  "expected": {
+    "shape": "reducer",
+    "dims": [
+      {"field": "d_large", "value": 850, "unit": "mm", "source": "drawing"},
+      {"field": "d_small", "value": 60, "unit": "cm", "source": "drawing"},
+      {"field": "height", "value": 45, "unit": "cm", "source": "drawing"},
+      {"field": "thickness", "value": null, "unit": null, "source": "drawing"}
+    ],
+    "missing": ["Laminate thickness"],
+    "ambiguities": ["mixed mm/cm units need confirmation", "end flanges requested but reducer flange costing is unsupported", "engine assumes a concentric cone"]
+  },
+  "notes": "Mixed units plus missing thickness plus an unsupported flange request must all be flagged."
+}

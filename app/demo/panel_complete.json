@@ -1,0 +1,20 @@
+{
+  "id": "panel_complete",
+  "title": "Cover panel - complete request",
+  "kind": "complete",
+  "shape_hint": "panel",
+  "description": "FICTIONAL DEMO. GRP cover panel 1200 x 800 mm, 5 mm thick, 50 mm all-round flange. Quantity 5.",
+  "drawing": "panel_complete.png",
+  "expected": {
+    "shape": "panel",
+    "dims": [
+      {"field": "length", "value": 1200, "unit": "mm", "source": "drawing"},
+      {"field": "width", "value": 800, "unit": "mm", "source": "drawing"},
+      {"field": "thickness", "value": 5, "unit": "mm", "source": "drawing"},
+      {"field": "flange", "value": 50, "unit": "mm", "source": "drawing"}
+    ],
+    "missing": [],
+    "ambiguities": []
+  },
+  "notes": "Every value is on the drawing and repeated in the text. Expect zero missing items."
+}

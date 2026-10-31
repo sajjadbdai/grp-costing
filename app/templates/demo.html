@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demos - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<header><h1>Demonstration Cases</h1><p>Fictional examples - no real customer data</p></header>
+<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<main>
+<ul class="steps"><li class="on">1. Upload or Describe</li><li>2. Review Inputs</li><li>3. Calculate</li><li>4. Compare &amp; Save</li></ul>
+{% if not muse.configured %}<div class="alert notice">AI is off (no MODEL_API_KEY). Demos run in manual mode with an expected-values reference for comparison.</div>{% endif %}
+{% for c in cases %}<section class="card"><h2>{{c.title}}</h2><p><span class="badge src-default">{{c.kind}}</span></p>
+<div class="review-grid"><div><img class="drawing" src="{{c.drawing_url}}" alt="{{c.title}}"></div><div>
+<p>{{c.description}}</p><p class="note">{{c.notes}}</p>
+<form method="post" action="/demo/extract/{{c.id}}"><button>Run this case</button></form>
+<p><a href="/?demo={{c.id}}">Open in Describe form instead</a></p>
+</div></div></section>{% endfor %}
+<section class="card"><h2>Before/after cost comparison</h2><p>Seeds a fictional panel estimate with two revisions (quantity 5 vs 10 with a resin rate change) and opens the side-by-side comparison.</p><form method="post" action="/demo/compare"><button>Load comparison</button></form></section>
+</main>
+<footer>GFPF hackathon build - demo rates unless replaced.</footer>
+</body></html>

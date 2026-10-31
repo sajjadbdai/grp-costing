@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estimate Result - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<header><h1>Estimate Result</h1><p>{{result.shape_label}} - batch of {{result.qty}}</p></header>
+<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<main>
+<ul class="steps"><li>1. Upload or Describe</li><li>2. Review Inputs</li><li class="on">3. Calculate</li><li>4. Compare &amp; Save</li></ul>
+{% if warnings %}<div class="alert notice"><b>Warnings carried into this estimate:</b><ul>{% for w in warnings %}<li>{{w}}</li>{% endfor %}</ul></div>{% endif %}
+<section class="card"><div class="kpis"><div><span>Batch total</span><b>BD {{'%.3f'|format(result.total_bd)}}</b></div><div><span>Cost per piece</span><b>BD {{'%.3f'|format(result.per_piece_bd)}}</b></div><div><span>Laminate / pc</span><b>{{'%.2f'|format(result.laminate_kg)}} kg</b></div></div>
+<h2>Confirmed inputs</h2>
+<table><tr><th>Dimension</th><th>Original</th><th>Millimetres</th></tr>{% for d in dims_display %}<tr><td>{{d.label}}</td><td>{{d.value}} {{d.unit}}</td><td>{% if d.mm is none %}-{% else %}{{'%.1f'|format(d.mm)}}{% endif %}</td></tr>{% endfor %}</table>
+<h2>Area and materials</h2>
+<table><tr><th>Part</th><th>Area m2</th></tr>{% for p in result.area_parts %}<tr><td>{{p.label}}</td><td>{{'%.4f'|format(p.area_m2)}}</td></tr>{% endfor %}<tr><td><b>Total area</b></td><td><b>{{'%.4f'|format(result.area_m2)}}</b></td></tr></table>
+<table><tr><th>Component</th><th>Qty / pc</th><th>Rate BD</th><th>Amount BD</th></tr>{% for line in result.lines %}<tr><td>{{line.label}}</td><td>{{'%.3f'|format(line.qty)}} {{line.unit}}</td><td>{{line.rate}}</td><td>{{'%.3f'|format(line.amount)}}</td></tr>{% endfor %}<tr><td colspan="3"><b>Subtotal per piece</b></td><td><b>{{'%.3f'|format(result.subtotal_pc_bd)}}</b></td></tr><tr><td colspan="3">Batch of {{result.qty}}</td><td>{{'%.3f'|format(result.batch_bd)}}</td></tr><tr><td colspan="3">Overhead</td><td>{{'%.3f'|format(result.overhead_bd)}}</td></tr><tr class="total"><td colspan="3">Estimated Total</td><td>BD {{'%.3f'|format(result.total_bd)}}</td></tr></table>
+</section>
+<section class="card"><h2>Assumptions</h2><ul>{% for m in result.assumptions %}<li>{{m}}</li>{% endfor %}</ul>
+<h2>Excluded (not charged)</h2><ul>{% for m in result.exclusions %}<li>{{m}}</li>{% endfor %}</ul></section>
+{% if explanation %}<section class="card"><h2>Plain-language explanation</h2><p>{{explanation}}</p></section>{% endif %}
+{% if ai_error %}<div class="alert error">Explanation unavailable: {{ai_error}}</div>{% endif %}
+<section class="card no-print"><h2>Save, revise, print</h2>
+<form method="post" action="/save"><label>Estimate label<input name="label" value="{{inputs.description[:60] or result.shape_label}}"></label><input type="hidden" name="inputs_json" value="{{inputs_json}}"><button>Save estimate</button></form>
+<form method="post" action="/review-edit"><input type="hidden" name="inputs_json" value="{{inputs_json}}"><button class="secondary">Edit inputs</button></form>
+{% if ai_available and not explanation %}<form method="post" action="/explain"><input type="hidden" name="inputs_json" value="{{inputs_json}}"><button class="secondary">Explain in plain language</button></form>{% endif %}
+<button class="secondary" onclick="window.print();return false;">Print</button>
+</section></main>
+<footer>GFPF hackathon build - demo rates unless replaced. Estimates only.</footer>
+</body></html>

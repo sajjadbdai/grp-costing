@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{meta.label}} - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<header><h1>{{meta.label}}</h1><p>Revision {{rev}} of {{meta.rev_count}} - saved {{saved_at}}</p></header>
+<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<main>
+<ul class="steps"><li>1. Upload or Describe</li><li>2. Review Inputs</li><li>3. Calculate</li><li class="on">4. Compare &amp; Save</li></ul>
+<section class="card"><p class="no-print">Revisions: {% for n in meta.rev_numbers %}<a href="/estimates/{{meta.id}}?rev={{n}}">{% if n == rev %}<b>{{n}}</b>{% else %}{{n}}{% endif %}</a> {% endfor %}</p>
+<div class="kpis"><div><span>Batch total</span><b>BD {{'%.3f'|format(result.total_bd)}}</b></div><div><span>Cost per piece</span><b>BD {{'%.3f'|format(result.per_piece_bd)}}</b></div><div><span>Area</span><b>{{'%.4f'|format(result.area_m2)}} m2</b></div></div>
+{% if snapshot.drawing %}<img class="drawing" src="/uploads/{{snapshot.drawing}}" alt="Saved drawing">{% endif %}
+{% if snapshot.description %}<h2>Description</h2><p>{{snapshot.description}}</p>{% endif %}
+<h2>Inputs (revision {{rev}})</h2>
+<table><tr><th>Dimension</th><th>Original</th><th>Millimetres</th></tr>{% for d in dims_display %}<tr><td>{{d.label}}</td><td>{{d.value}} {{d.unit}}</td><td>{% if d.mm is none %}-{% else %}{{'%.1f'|format(d.mm)}}{% endif %}</td></tr>{% endfor %}</table>
+<h2>Breakdown</h2>
+<table><tr><th>Component</th><th>Qty / pc</th><th>Rate BD</th><th>Amount BD</th></tr>{% for line in result.lines %}<tr><td>{{line.label}}</td><td>{{'%.3f'|format(line.qty)}} {{line.unit}}</td><td>{{line.rate}}</td><td>{{'%.3f'|format(line.amount)}}</td></tr>{% endfor %}<tr class="total"><td colspan="3">Batch total ({{result.qty}} pc)</td><td>BD {{'%.3f'|format(result.total_bd)}}</td></tr></table>
+<h2>Assumptions</h2><ul>{% for m in result.assumptions %}<li>{{m}}</li>{% endfor %}</ul>
+<h2>Excluded</h2><ul>{% for m in result.exclusions %}<li>{{m}}</li>{% endfor %}</ul>
+{% if result.warnings %}<h2>Warnings</h2><ul>{% for m in result.warnings %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
+</section>
+<section class="card no-print"><h2>Revise (creates revision {{rev + 1}})</h2>
+<form method="post" action="/estimates/{{meta.id}}/revise">
+<input type="hidden" name="description" value="{{snapshot.description}}"><input type="hidden" name="drawing" value="{{snapshot.drawing}}">
+<div class="grid">{% for d in dims_display %}<label>{{d.label}} ({{d.unit}})<input name="dim_{{d.field}}" value="{{d.value}}"><input type="hidden" name="unit_{{d.field}}" value="{{d.unit}}"></label>{% endfor %}
+<label>Quantity<input name="qty" type="number" min="1" value="{{result.qty}}"></label>
+{% for k, v in snapshot.recipe.items() %}<label>{{k}}<input name="recipe_{{k}}" type="number" step="0.01" value="{{v}}"></label>{% endfor %}
+{% for k, v in snapshot.rates.items() %}<label>{{k}}<input name="rate_{{k}}" type="number" step="0.001" value="{{v}}"></label>{% endfor %}</div>
+{% for k, v in snapshot.options.items() %}<input type="hidden" name="opt_{{k}}" value="{% if v %}yes{% else %}no{% endif %}">{% endfor %}
+<button>Save as new revision</button></form></section>
+<section class="card no-print"><h2>Compare</h2>
+<form method="get" action="/compare"><input type="hidden" name="a" value="{{meta.id}}:{{rev}}">
+<label>Compare this revision against<select name="b">{% for n in meta.rev_numbers %}{% if n != rev %}<option value="{{meta.id}}:{{n}}">This estimate, rev {{n}}</option>{% endif %}{% endfor %}{% for o in others %}{% if o.id != meta.id %}<option value="{{o.id}}">{{o.label}} (latest)</option>{% endif %}{% endfor %}</select></label>
+<button>Compare</button></form>
+<button class="secondary" onclick="window.print();return false;">Print</button></section>
+</main>
+<footer>GFPF hackathon build - demo rates unless replaced.</footer>
+</body></html>

@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saved Estimates - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<header><h1>Saved Estimates</h1><p>Revisions are snapshots - later rate changes never rewrite history</p></header>
+<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<main>
+<ul class="steps"><li>1. Upload or Describe</li><li>2. Review Inputs</li><li>3. Calculate</li><li class="on">4. Compare &amp; Save</li></ul>
+<section class="card">
+{% if estimates %}<table><tr><th>Label</th><th>Shape</th><th>Revs</th><th>Qty</th><th>Batch BD</th><th>Per pc BD</th><th>Updated</th></tr>
+{% for e in estimates %}<tr><td><a href="/estimates/{{e.id}}">{{e.label}}</a></td><td>{{e.shape_id}}</td><td>{{e.revs}}</td><td>{{e.qty}}</td><td>{{'%.3f'|format(e.total_bd)}}</td><td>{{'%.3f'|format(e.per_piece_bd)}}</td><td>{{e.updated_at}}</td></tr>{% endfor %}</table>
+{% else %}<p class="muted">No saved estimates yet. Calculate one, then press Save.</p>{% endif %}
+</section></main>
+<footer>GFPF hackathon build - demo rates unless replaced.</footer>
+</body></html>

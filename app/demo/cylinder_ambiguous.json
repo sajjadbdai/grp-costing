@@ -1,0 +1,19 @@
+{
+  "id": "cylinder_ambiguous",
+  "title": "Water tank - ambiguous request",
+  "kind": "ambiguous",
+  "shape_hint": "auto",
+  "description": "FICTIONAL DEMO. Customer needs a round GRP water tank, about 1.2 m wide and 1.5 m tall. Please quote for 2 pieces. Thickness as per standard.",
+  "drawing": "cylinder_ambiguous.png",
+  "expected": {
+    "shape": "cylinder",
+    "dims": [
+      {"field": "diameter", "value": 1.2, "unit": "m", "source": "description"},
+      {"field": "height", "value": 1.5, "unit": "m", "source": "description"},
+      {"field": "thickness", "value": null, "unit": null, "source": "description"}
+    ],
+    "missing": ["Laminate thickness"],
+    "ambiguities": ["open or closed top not stated", "'as per standard' thickness is undefined"]
+  },
+  "notes": "Thickness and end covers are unstated, so review must ask questions before calculating."
+}

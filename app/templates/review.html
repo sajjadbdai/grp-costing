@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review Inputs - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<header><h1>Review Inputs</h1><p>Check every value against the drawing before calculating</p></header>
+<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<main>
+<ul class="steps"><li>1. Upload or Describe</li><li class="on">2. Review Inputs</li><li>3. Calculate</li><li>4. Compare &amp; Save</li></ul>
+{% if ai_error %}<div class="alert error">{{ai_error}}</div>{% endif %}
+{% if ai_notice %}<div class="alert notice">{{ai_notice}}</div>{% endif %}
+{% if form_errors %}<div class="alert error"><b>Fix before calculating:</b><ul>{% for e in form_errors %}<li>{{e}}</li>{% endfor %}</ul></div>{% endif %}
+<form method="post" action="/calculate">
+<input type="hidden" name="description" value="{{description}}">
+<input type="hidden" name="drawing" value="{{drawing}}">
+<input type="hidden" name="demo_ref" value="{{demo_ref or ''}}">
+<section class="card"><h2>Product shape: {{shape_label}}</h2>
+{% if shape_evidence %}<p class="note">Why: {{shape_evidence}}</p>{% endif %}
+<div class="grid"><label>Shape<select name="shape_id">{% for sid in shape_ids %}<option value="{{sid}}"{% if sid == shape_id %} selected{% endif %}>{{shape_labels[sid]}}</option>{% endfor %}</select></label><label>Quantity<input name="qty" type="number" min="1" value="{{qty}}"></label></div>
+<button class="secondary no-print" formaction="/review-shape">Apply shape</button>
+</section>
+<div class="review-grid">
+<section class="card"><h2>Drawing</h2>
+{% if drawing %}<img class="drawing" src="/uploads/{{drawing}}" alt="Customer drawing">{% else %}<p class="muted">No drawing uploaded - values come from the description below.</p>{% endif %}
+{% if description %}<h3>Description</h3><p>{{description}}</p>{% endif %}
+</section>
+<section class="card"><h2>Values to confirm</h2>
+{% for row in rows %}<label>{{row.label}}{% if row.required %} *{% endif %}<span class="badge src-{{row.source}}">{{row.source}}</span>
+<div class="dimrow"><input name="dim_{{row.key}}" value="{{row.value}}" placeholder="{% if row.required %}required{% else %}optional{% endif %}"{% if row.missing %} class="missing"{% endif %}><select name="unit_{{row.key}}"><option value="mm"{% if row.unit == 'mm' %} selected{% endif %}>mm</option><option value="cm"{% if row.unit == 'cm' %} selected{% endif %}>cm</option><option value="m"{% if row.unit == 'm' %} selected{% endif %}>m</option></select></div>
+{% if row.mm is not none %}<span class="quote">= {{'%.1f'|format(row.mm)}} mm</span>{% endif %}
+{% if row.quote %}<span class="quote">Evidence: {{row.quote}}</span>{% endif %}
+</label>{% endfor %}
+{% for opt in options %}<label>{{opt.label}}<select name="opt_{{opt.key}}"><option value="yes"{% if opt.value %} selected{% endif %}>Yes</option><option value="no"{% if not opt.value %} selected{% endif %}>No</option></select></label>{% endfor %}
+</section>
+</div>
+{% if missing or ambiguities or questions or notes %}
+<section class="card"><h2>Needs your attention</h2>
+{% if missing %}<h3>Missing</h3><ul>{% for m in missing %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
+{% if ambiguities %}<h3>Ambiguous or conflicting</h3><ul>{% for m in ambiguities %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
+{% if questions %}<h3>Clarification questions</h3><ol>{% for m in questions %}<li>{{m}}</li>{% endfor %}</ol>{% endif %}
+{% if notes %}<h3>Notes</h3><ul>{% for m in notes %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
+</section>
+{% endif %}
+<section class="card"><h2>Recipe and rates</h2><div class="grid">
+<label>Density (kg/m3)<input name="recipe_density_kg_m3" type="number" step="0.01" value="{{recipe.density_kg_m3}}"></label>
+<label>Resin %<input name="recipe_resin_pct" type="number" step="0.01" value="{{recipe.resin_pct}}"></label>
+<label>Fiber %<input name="recipe_fiber_pct" type="number" step="0.01" value="{{recipe.fiber_pct}}"></label>
+<label>MEKP %<input name="recipe_mekp_pct" type="number" step="0.01" value="{{recipe.mekp_pct}}"></label>
+<label>Wastage %<input name="recipe_wastage_pct" type="number" step="0.01" value="{{recipe.wastage_pct}}"></label>
+<label>Labour hrs/pc<input name="recipe_labour_hours" type="number" step="0.1" value="{{recipe.labour_hours}}"></label>
+<label>Overhead %<input name="recipe_overhead_pct" type="number" step="0.01" value="{{recipe.overhead_pct}}"></label>
+<label>Resin (BD/kg)<input name="rate_resin" type="number" step="0.001" value="{{rates.resin}}"></label>
+<label>Fiber (BD/kg)<input name="rate_fiber" type="number" step="0.001" value="{{rates.fiber}}"></label>
+<label>MEKP (BD/kg)<input name="rate_mekp" type="number" step="0.001" value="{{rates.mekp}}"></label>
+<label>Labour (BD/hr)<input name="rate_labour" type="number" step="0.001" value="{{rates.labour}}"></label>
+<label>Consumables (BD/pc)<input name="rate_consumables" type="number" step="0.001" value="{{rates.consumables}}"></label>
+</div>
+<button>Confirm &amp; Calculate</button></section>
+</form>
+{% if demo_expected %}<section class="card"><h2>Demo reference (expected values)</h2><details open><summary>Show expected extraction for evaluation</summary>
+<table><tr><th>Field</th><th>Expected</th><th>Source</th></tr>
+{% for d in demo_expected.dims %}<tr><td>{{d.field}}</td><td>{% if d.value is none %}<i>missing</i>{% else %}{{d.value}} {{d.unit}}{% endif %}</td><td>{{d.source}}</td></tr>{% endfor %}
+</table>
+{% if demo_expected.missing %}<p><b>Should flag missing:</b> {{demo_expected.missing|join(', ')}}</p>{% endif %}
+{% if demo_expected.ambiguities %}<p><b>Should flag:</b> {{demo_expected.ambiguities|join(' | ')}}</p>{% endif %}
+</details></section>{% endif %}
+</main>
+<footer>GFPF hackathon build - demo rates unless replaced.</footer>
+</body></html>
