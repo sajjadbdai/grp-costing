@@ -5,9 +5,8 @@
 .alert{border-radius:9px;padding:12px 15px;margin:0 0 16px}
 .alert.error{background:#fdecec;border:1px solid #f3b4b4;color:#8f1d1d}
 .alert.notice{background:#fff6e0;border:1px solid #e7cf8a;color:#6b5510}
-.review-grid{display:grid;grid-template-columns:minmax(260px,400px) 1fr;gap:20px}
-@media(max-width:800px){.review-grid{grid-template-columns:1fr}}
-.drawing{max-width:100%;border:1px solid #dbe3ec;border-radius:9px}
+.review-grid{display:grid;grid-template-columns:1fr;gap:20px}
+.drawing{max-width:100%;max-height:480px;width:auto;display:block;margin:0 auto;border:1px solid #dbe3ec;border-radius:9px}
 .badge{display:inline-block;font-size:12px;font-weight:700;border-radius:20px;padding:2px 10px;margin-left:8px;white-space:nowrap}
 .src-drawing{background:#e2ecf7;color:#174a75}.src-description{background:#e6f4ea;color:#1d6b38}.src-user{background:#efe8f7;color:#4e2f86}.src-default{background:#f0eede;color:#6b5f2a}
 input.missing,select.missing{border:2px solid #d9a514;background:#fff8e3}
@@ -20,4 +19,34 @@ table.diff tr.changed td{background:#fff6e0}
 details{margin-top:14px}summary{cursor:pointer;font-weight:700}
 footer{max-width:1100px;margin:0 auto 30px;padding:0 16px;color:#5d6877;font-size:13px}
 nav.top{max-width:1100px;margin:0 auto;padding:10px 16px}.top a{color:#123f63;font-weight:700;margin-right:16px}
+.sheet-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:2px solid #123f63;padding-bottom:10px;margin-bottom:6px}
+.sheet-head h2{margin:0}.sheet-meta{text-align:right;font-size:13px;color:#3c4c5f;white-space:nowrap}
+.sign-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px}
+.sign-grid div{border:1px solid #dbe3ec;border-radius:9px;padding:10px;min-height:86px}
+@media(max-width:600px){.sign-grid{grid-template-columns:1fr}.sheet-head{flex-direction:column}.sheet-meta{text-align:left}}
 @media print{header p,.no-print,.btn,form button{display:none}body{background:#fff}.card{box-shadow:none;border:1px solid #ccc}}
+.scantext{background:#f4f7fb;border:1px solid #dbe3ec;border-radius:8px;padding:12px;max-height:260px;overflow:auto;font-size:12px;white-space:pre-wrap}
+.toolbar{display:flex;gap:8px;align-items:center;background:#eef2f7;border-bottom:1px solid #d5dde7;padding:8px 16px;position:sticky;top:0;z-index:50}
+.tbtn{display:inline-block;background:#fff;border:1px solid #b9c4d2;border-radius:6px;padding:7px 14px;font-weight:700;color:#123f63;text-decoration:none;font-size:14px;margin:0;cursor:pointer}
+.tbtn.primary{background:#1265a3;border-color:#1265a3;color:#fff;margin-left:auto}
+.tspacer{flex:1}
+header.apphead{background:#123f63;color:#fff;padding:18px 5%}
+header.apphead h1{font-size:22px}
+.livebar{position:sticky;bottom:0;background:#123f63;color:#fff;padding:12px 5%;z-index:40}
+.live-main{font-weight:700;font-size:16px;color:#ffd97a}
+.livebar .live-sub{font-size:13px;opacity:.92;margin-top:4px}
+.livebar .live-status{font-size:12px;opacity:.75;margin-top:4px}
+main{padding-bottom:10px}
+
+.fields{display:flex;flex-direction:column}
+.field{display:flex;align-items:center;gap:12px;padding:7px 2px;border-bottom:1px solid #edf1f6;margin:0}
+.field:last-child{border-bottom:0}
+.flabel{flex:0 0 240px;font-weight:600}
+.finput{display:block;flex:1 1 auto;min-width:0}
+.field input,.field select{width:100%;margin-top:0}
+.field .dimrow{margin:0}
+.field .quote{margin-top:4px}
+td input,td select{margin-top:0}
+.update-btn{margin:0;padding:8px 14px;white-space:nowrap}
+.update-btn:disabled{opacity:.45;cursor:default}
+@media(max-width:700px){.field{flex-direction:column;align-items:stretch;gap:4px}.flabel{flex:none}}

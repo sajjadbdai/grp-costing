@@ -26,12 +26,18 @@ DEFAULT_BASE_URL = "https://api.meta.ai/v1"
 DEFAULT_MODEL = "muse-wonder-1.0"
 
 SOURCES = ("drawing", "description", "user", "default")
-DIM_FIELDS = ("length", "width", "thickness", "flange", "diameter", "height", "d_large", "d_small")
+DIM_FIELDS = ("length", "width", "thickness", "flange", "diameter", "height", "d_large",
+              "d_small", "area", "diameter_inner")
+AREA_UNITS = ("m2", "m²", "sqm", "sq m", "sq.m", "sq.m.")
+SHAPE_IDS = ("panel", "cylinder", "reducer", "box", "cabin", "dome",
+               "sphere", "custom", "unknown")
 
 EXTRACTION_SCHEMA = {
     "type": "object",
     "properties": {
-        "shape": {"type": "string", "enum": ["panel", "cylinder", "reducer", "unknown"]},
+        "shape": {"type": "string",
+                  "enum": ["panel", "cylinder", "reducer", "box", "cabin",
+                          "dome", "sphere", "custom", "unknown"]},
         "shape_evidence": {"type": "string"},
         "quantity": {"type": ["integer", "null"]},
         "dims": {
@@ -64,6 +70,15 @@ Shapes and their dimension fields:
 - panel: length, width, thickness, flange (flange = all-round planar border width, 0 if none)
 - cylinder: diameter (outer), height (axial length), thickness; options closed_bottom/closed_top true/false
 - reducer: d_large, d_small, height (axial), thickness (concentric cone, open ends)
+- box: length, width, height, thickness (rectangular tank, chamber or enclosure);
+- cabin: overall length, width, height, outer skin target (security cabins and
+  fitted kiosks with door, windows and wiring - prefer over box when fitted);
+- dome: diameter (outer base), height (rise), thickness (spherical caps and
+  hemispheres - rise is half the diameter for a true hemisphere);
+- sphere: diameter (outer), thickness (full ornamental balls);
+  option open_top true/false (lid included when false)
+- custom: area (measured surface in m2, for boat hulls and free-form parts) plus
+  thickness; use only when the customer states a measured area - never compute it
 
 Strict rules:
 1. Only report values supported by the description or drawing. Never invent dimensions.
@@ -88,6 +103,15 @@ with its source and quote, plus empty missing/ambiguities/questions lists."""
 EXPLAIN_SYSTEM = """You explain a fiberglass factory cost estimate in plain, short language for \
 factory staff. Use ONLY the numbers given. Do not invent rates or quantities, do not claim \
 structural suitability, pressure ratings or certification. End with the exclusions line given."""
+
+TRANSCRIBE_SYSTEM = """You read engineering drawings for a fiberglass factory estimator. Copy \
+out ALL text visible in the drawing EXACTLY as printed: the title block (project, \
+drawing number, overall size, internal size, quantity, colors, finishes, materials), \
+every legend and symbol-table row (symbol, description, reference, quantity), the \
+label on every view, every dimension annotation, and all notes. Write one item per \
+line. Copy numbers, units and quantities exactly as shown; never invent text you \
+cannot read - write "[unreadable]" for illegible words. Plain text only: no JSON, \
+no markdown, no commentary."""
 
 
 class MuseError(Exception):
@@ -321,8 +345,10 @@ def normalize_extraction(raw, shape_hint="auto"):
     """Coerce a raw model reply into the review model. Never raises."""
     notes = []
     shape = str((raw or {}).get("shape", "unknown")).strip().lower()
-    if shape not in ("panel", "cylinder", "reducer"):
-        if shape_hint in ("panel", "cylinder", "reducer"):
+    if shape not in ("panel", "cylinder", "reducer", "box", "cabin", "dome",
+                      "sphere", "custom"):
+        if shape_hint in ("panel", "cylinder", "reducer", "box", "cabin",
+                           "dome", "sphere", "custom"):
             notes.append("Shape unclear; using your selected shape '%s'." % shape_hint)
             shape = shape_hint
         else:
@@ -343,7 +369,15 @@ def normalize_extraction(raw, shape_hint="auto"):
             notes.append("Rejected non-positive value for %s." % field)
             value = None
         unit = str(entry.get("unit", "") or "").strip().lower()
-        if unit not in ("mm", "cm", "m"):
+        if field == "area":
+            if unit in AREA_UNITS:
+                unit = "m2"
+            else:
+                if entry.get("unit") not in (None, ""):
+                    notes.append("Unknown unit %r for %s; assumed m2."
+                                 % (entry.get("unit"), field))
+                unit = "m2" if value is not None else None
+        elif unit not in ("mm", "cm", "m"):
             if entry.get("unit") not in (None, ""):
                 notes.append("Unknown unit %r for %s; assumed mm." % (entry.get("unit"), field))
             unit = "mm" if value is not None else None
@@ -407,6 +441,34 @@ def extract_inputs(description, image_bytes=None, image_mime=None, shape_hint="a
     return normalize_extraction(extract_json(extract_output_text(data)), shape_hint)
 
 
+def transcribe_drawing(image_bytes, image_mime=None, description="", config=None):
+    """OCR-style transcription of all visible drawing text.
+
+    Used when an upload has no extractable text layer (photos and
+    screenshots). The deterministic schedule reader - not the model -
+    interprets the transcription, so detection stays testable.
+    """
+    config = config or MuseConfig()
+    if not image_bytes:
+        raise MuseError("No drawing image to transcribe.")
+    limit = config.max_image_mb * 1024 * 1024
+    if len(image_bytes) > limit:
+        raise MuseError(
+            "The drawing is larger than %.0f MB; please upload a smaller image."
+            % config.max_image_mb
+        )
+    user_text = "Transcribe this drawing now.\n"
+    if (description or "").strip():
+        user_text += "Customer description for context:\n%s\n" % description.strip()
+    data = _call(config, TRANSCRIBE_SYSTEM, user_text,
+                 _data_url(image_bytes, image_mime or "image/jpeg"), None,
+                 temperature=0.0, reasoning_effort=config.reasoning_effort)
+    text = extract_output_text(data).strip()
+    if not text:
+        raise MuseError("The model returned an empty transcription.")
+    return text[:8000]
+
+
 def explain_estimate(summary_text, config=None):
     """Narrate confirmed numbers in plain factory language."""
     config = config or MuseConfig()
@@ -415,3 +477,68 @@ def explain_estimate(summary_text, config=None):
     if not text:
         raise MuseError("The model returned an empty explanation.")
     return text[:3000]
+
+
+PRICES_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "prices": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "price": {"type": ["number", "null"]},
+                    "note": {"type": "string"},
+                },
+                "required": ["key", "price"],
+            },
+        },
+    },
+    "required": ["prices"],
+}
+
+PRICES_SYSTEM = """You are a procurement price database for a fiberglass (GRP) factory in \
+Bahrain. For EACH rate-book line, give a NUMERIC best-estimate typical 2025-2026 Gulf market \
+price in Bahraini dinars (BD) per the stated unit, based on supplier listings and factory \
+prices you know. Common materials (resin, fiberglass, catalyst, labour, steel, plywood) MUST \
+have numeric prices - use null ONLY for an item you genuinely have no price knowledge of. \
+Each note states the basis in under 12 words (e.g. "Gulf 2025 industrial"). Reply with JSON \
+only, matching the requested schema. No prose outside the JSON."""
+
+
+def suggest_prices(items, config=None):
+    """Today's market prices for rate-book items from the model.
+
+    items: sequence of (key, label) with the unit in the label. Returns
+    {key: {"price": float|None, "note": str}} for known keys only; keys
+    the model skips or mangles are simply absent. Raises MuseError when
+    the key is missing or the reply has no usable JSON.
+    """
+    config = config or MuseConfig()
+    keys = [key for key, _ in items]
+    lines = ["%s | %s" % (key, label) for key, label in items]
+    user_text = ("Rate book (key | material with unit):\n" + "\n".join(lines)
+                 + "\nReturn the prices JSON now.")
+    data = _call(config, PRICES_SYSTEM, user_text, None, PRICES_SCHEMA,
+                 max_tokens=4000, temperature=0.0,
+                 reasoning_effort=config.reasoning_effort)
+    raw = extract_json(extract_output_text(data))
+    entries = raw.get("prices") if isinstance(raw, dict) else None
+    found = {}
+    for entry in entries or []:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        if key not in keys or key in found:
+            continue
+        price = entry.get("price")
+        if price is not None:
+            try:
+                price = float(price)
+            except (TypeError, ValueError):
+                continue
+            if price < 0:
+                continue
+        found[key] = {"price": price, "note": str(entry.get("note") or "")[:200]}
+    return found

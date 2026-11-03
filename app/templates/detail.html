@@ -1,33 +1,60 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{meta.label}} - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{meta.label}} - GFPF</title><link rel="stylesheet" href="/static/style.css?v=2"></head><body>
 <header><h1>{{meta.label}}</h1><p>Revision {{rev}} of {{meta.rev_count}} - saved {{saved_at}}</p></header>
-<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a><a href="/rates">Material prices</a></nav>
 <main>
 <ul class="steps"><li>1. Upload or Describe</li><li>2. Review Inputs</li><li>3. Calculate</li><li class="on">4. Compare &amp; Save</li></ul>
 <section class="card"><p class="no-print">Revisions: {% for n in meta.rev_numbers %}<a href="/estimates/{{meta.id}}?rev={{n}}">{% if n == rev %}<b>{{n}}</b>{% else %}{{n}}{% endif %}</a> {% endfor %}</p>
+<div class="sheet-head"><div><h2>Estimation Sheet</h2><p class="note">{{meta.label}}</p></div><div class="sheet-meta">Sheet no: <b>{{sheet_no}}</b><br>Date: {{sheet_date}}<br>Status: {{sheet_status}}</div></div>
 <div class="kpis"><div><span>Batch total</span><b>BD {{'%.3f'|format(result.total_bd)}}</b></div><div><span>Cost per piece</span><b>BD {{'%.3f'|format(result.per_piece_bd)}}</b></div><div><span>Area</span><b>{{'%.4f'|format(result.area_m2)}} m2</b></div></div>
 {% if snapshot.drawing %}<img class="drawing" src="/uploads/{{snapshot.drawing}}" alt="Saved drawing">{% endif %}
 {% if snapshot.description %}<h2>Description</h2><p>{{snapshot.description}}</p>{% endif %}
+<h2>Item specification</h2>
+<table><tr><th>Item</th><th>Detail</th></tr>{% for s in spec_rows %}<tr><td>{{s.label}}</td><td>{{s.value}}</td></tr>{% endfor %}</table>
 <h2>Inputs (revision {{rev}})</h2>
-<table><tr><th>Dimension</th><th>Original</th><th>Millimetres</th></tr>{% for d in dims_display %}<tr><td>{{d.label}}</td><td>{{d.value}} {{d.unit}}</td><td>{% if d.mm is none %}-{% else %}{{'%.1f'|format(d.mm)}}{% endif %}</td></tr>{% endfor %}</table>
+<p class="note">Layup: {{result.layup_label}} - {{result.resin_label}} - gelcoat {% if result.gelcoat %}yes{% else %}no{% endif %} - mould: {% if result.mould_bd %}new (BD {{'%.3f'|format(result.mould_bd)}}){% else %}existing{% endif %}{% if result.supports_bd %} - supports BD {{'%.3f'|format(result.supports_bd)}}/pc{% endif %}.</p>
+<table><tr><th>Dimension</th><th>Original</th><th>Metric</th></tr>{% for d in dims_display %}<tr><td>{{d.label}}</td><td>{{d.value}} {{d.unit}}</td><td>{{d.metric}}</td></tr>{% endfor %}</table>
 <h2>Breakdown</h2>
-<table><tr><th>Component</th><th>Qty / pc</th><th>Rate BD</th><th>Amount BD</th></tr>{% for line in result.lines %}<tr><td>{{line.label}}</td><td>{{'%.3f'|format(line.qty)}} {{line.unit}}</td><td>{{line.rate}}</td><td>{{'%.3f'|format(line.amount)}}</td></tr>{% endfor %}<tr class="total"><td colspan="3">Batch total ({{result.qty}} pc)</td><td>BD {{'%.3f'|format(result.total_bd)}}</td></tr></table>
+<table><tr><th>Component</th><th>Qty / pc</th><th>Rate BD</th><th>Amount BD</th></tr>{% for line in result.lines %}<tr><td>{{line.label}}</td><td>{{'%.3f'|format(line.qty)}} {{line.unit}}</td><td>{{line.rate}}</td><td>{{'%.3f'|format(line.amount)}}</td></tr>{% endfor %}{% if result.mould_bd %}<tr><td colspan="3">New mould (amortised)</td><td>{{'%.3f'|format(result.mould_bd)}}</td></tr>{% endif %}{% if result.delivery_batch_bd %}<tr><td colspan="3">Delivery, packing, installation</td><td>{{'%.3f'|format(result.delivery_batch_bd)}}</td></tr>{% endif %}{% if result.testing_batch_bd %}<tr><td colspan="3">Testing, inspection, certification</td><td>{{'%.3f'|format(result.testing_batch_bd)}}</td></tr>{% endif %}<tr class="total"><td colspan="3">Batch total ({{result.qty}} pc)</td><td>BD {{'%.3f'|format(result.total_bd)}}</td></tr>{% if result.markup_bd %}<tr><td colspan="3">Margin / markup ({{'%.2f'|format(result.markup_pct)}}%)</td><td>{{'%.3f'|format(result.markup_bd)}}</td></tr><tr><td colspan="3"><b>Selling price</b></td><td><b>BD {{'%.3f'|format(result.selling_bd)}}</b></td></tr>{% endif %}{% if result.tax_bd %}<tr><td colspan="3">Tax / duties ({{'%.2f'|format(result.tax_pct)}}%)</td><td>{{'%.3f'|format(result.tax_bd)}}</td></tr><tr class="total"><td colspan="3">Grand total</td><td>BD {{'%.3f'|format(result.grand_total_bd)}}</td></tr>{% endif %}</table>
 <h2>Assumptions</h2><ul>{% for m in result.assumptions %}<li>{{m}}</li>{% endfor %}</ul>
-<h2>Excluded</h2><ul>{% for m in result.exclusions %}<li>{{m}}</li>{% endfor %}</ul>
+<h2>Excluded</h2>{% if result.exclusions %}<ul>{% for m in result.exclusions %}<li>{{m}}</li>{% endfor %}</ul>{% else %}<p class="note">Nothing excluded - every standard item is included above.</p>{% endif %}
 {% if result.warnings %}<h2>Warnings</h2><ul>{% for m in result.warnings %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
 </section>
+<section class="card"><h2>Approval</h2><div class="sign-grid"><div>Prepared by<p class="note">Signature / name / date</p></div><div>Checked by<p class="note">Signature / name / date</p></div><div>Approved by<p class="note">Signature / name / date</p></div></div></section>
 <section class="card no-print"><h2>Revise (creates revision {{rev + 1}})</h2>
 <form method="post" action="/estimates/{{meta.id}}/revise">
 <input type="hidden" name="description" value="{{snapshot.description}}"><input type="hidden" name="drawing" value="{{snapshot.drawing}}">
 <div class="grid">{% for d in dims_display %}<label>{{d.label}} ({{d.unit}})<input name="dim_{{d.field}}" value="{{d.value}}"><input type="hidden" name="unit_{{d.field}}" value="{{d.unit}}"></label>{% endfor %}
 <label>Quantity<input name="qty" type="number" min="1" value="{{result.qty}}"></label>
-{% for k, v in snapshot.recipe.items() %}<label>{{k}}<input name="recipe_{{k}}" type="number" step="0.01" value="{{v}}"></label>{% endfor %}
-{% for k, v in snapshot.rates.items() %}<label>{{k}}<input name="rate_{{k}}" type="number" step="0.001" value="{{v}}"></label>{% endfor %}</div>
+<label>Laminate schedule<select name="layup">{% for sid in layup_ids %}<option value="{{sid}}"{% if sid == snapshot.get('layup', 'classic') %} selected{% endif %}>{{layup_labels[sid]}}</option>{% endfor %}</select></label>
+<label>Gelcoat<select name="gelcoat"><option value="auto"{% if snapshot.get('gelcoat') is none %} selected{% endif %}>Auto</option><option value="yes"{% if snapshot.get('gelcoat') is true %} selected{% endif %}>Yes</option><option value="no"{% if snapshot.get('gelcoat') is false %} selected{% endif %}>No</option></select></label>
+<label>Mould<select name="mould_option"><option value="have"{% if snapshot.get('mould_option', 'have') == 'have' %} selected{% endif %}>Have mould</option><option value="need"{% if snapshot.get('mould_option', 'have') == 'need' %} selected{% endif %}>Need new mould</option></select></label>
+<label>Mould cost (BD)<input name="mould_cost" type="number" step="0.001" min="0" value="{{snapshot.get('mould_cost', 0.0)}}"></label>
+<label>Mould life (blank = batch)<input name="mould_life_qty" type="number" min="1" step="1" value="{{snapshot.get('mould_life_qty') or ''}}"></label>
+<label>Resin<select name="resin_type">{% for rid in ['gp', 'iso', 've'] %}<option value="{{rid}}"{% if snapshot.get('resin_type', 'gp') == rid %} selected{% endif %}>{{rid}}</option>{% endfor %}</select></label>
+<label>Plywood m2/pc<input name="plywood_m2" type="number" step="0.01" min="0" value="{{snapshot.get('plywood_m2', 0.0)}}"></label>
+<label>Steel kg/pc<input name="steel_kg" type="number" step="0.01" min="0" value="{{snapshot.get('steel_kg', 0.0)}}"></label>
+<label>Hardware BD/pc<input name="hardware_cost" type="number" step="0.01" min="0" value="{{snapshot.get('hardware_cost', 0.0)}}"></label>
+<label>Paint<select name="paint"><option value="no"{% if not snapshot.get('paint') %} selected{% endif %}>No</option><option value="yes"{% if snapshot.get('paint') %} selected{% endif %}>Yes</option></select></label>
+<label>Extra area m2/pc<input name="extra_area_m2" type="number" step="0.01" min="0" value="{{snapshot.get('extra_area_m2', 0.0)}}"></label>
+<label>Delivery BD/pc<input name="delivery_bd" type="number" step="0.01" min="0" value="{{snapshot.get('delivery_bd', 0.0)}}"></label>
+<label>Testing BD/pc<input name="testing_bd" type="number" step="0.01" min="0" value="{{snapshot.get('testing_bd', 0.0)}}"></label>
+<label>Markup %<input name="markup_pct" type="number" step="0.01" min="0" value="{{snapshot.get('markup_pct', 0.0)}}"></label>
+<label>Tax %<input name="tax_pct" type="number" step="0.01" min="0" value="{{snapshot.get('tax_pct', 0.0)}}"></label>
+<label>Openings m2<input name="openings_m2" type="number" step="0.01" min="0" value="{{snapshot.get('openings_m2', 0.0)}}"></label></div>
+<table><tr><th>Bought-in item</th><th>Qty</th><th>Unit</th><th>Rate BD</th></tr>
+{% for b in snapshot.get('bought_ins', []) %}<tr><td><input name="boughtin_{{loop.index0}}_label" value="{{b.label}}" size="32"></td><td><input name="boughtin_{{loop.index0}}_qty" type="number" step="0.01" min="0" value="{{b.qty}}"></td><td><input name="boughtin_{{loop.index0}}_unit" value="{{b.unit}}" size="4"></td><td><input name="boughtin_{{loop.index0}}_rate" type="number" step="0.001" min="0" value="{{b.rate}}"></td></tr>{% endfor %}
+{% for j in range(snapshot.get('bought_ins', [])|length, snapshot.get('bought_ins', [])|length + 2) %}<tr><td><input name="boughtin_{{j}}_label" value="" size="32" placeholder="Add item"></td><td><input name="boughtin_{{j}}_qty" type="number" step="0.01" min="0" value=""></td><td><input name="boughtin_{{j}}_unit" value="no" size="4"></td><td><input name="boughtin_{{j}}_rate" type="number" step="0.001" min="0" value=""></td></tr>{% endfor %}
+</table>
+<input type="hidden" name="boughtin_count" value="{{snapshot.get('bought_ins', [])|length + 2}}"><div class="grid">
+{% for k, label in recipe_labels.items() %}<label>{{label}}<input name="recipe_{{k}}" type="number" step="0.01" value="{{snapshot.recipe.get(k, '')}}"></label>{% endfor %}
+{% for k, label in rate_labels.items() %}<label>{{label}}<input name="rate_{{k}}" type="number" step="0.001" value="{{snapshot.rates.get(k, '')}}"></label>{% endfor %}</div>
 {% for k, v in snapshot.options.items() %}<input type="hidden" name="opt_{{k}}" value="{% if v %}yes{% else %}no{% endif %}">{% endfor %}
 <button>Save as new revision</button></form></section>
 <section class="card no-print"><h2>Compare</h2>
 <form method="get" action="/compare"><input type="hidden" name="a" value="{{meta.id}}:{{rev}}">
 <label>Compare this revision against<select name="b">{% for n in meta.rev_numbers %}{% if n != rev %}<option value="{{meta.id}}:{{n}}">This estimate, rev {{n}}</option>{% endif %}{% endfor %}{% for o in others %}{% if o.id != meta.id %}<option value="{{o.id}}">{{o.label}} (latest)</option>{% endif %}{% endfor %}</select></label>
 <button>Compare</button></form>
+<p><a class="btn" href="/estimates/{{meta.id}}/pdf?rev={{rev}}">Download PDF</a><a class="btn" href="/estimates/{{meta.id}}/xlsx?rev={{rev}}">Download Excel</a></p>
 <button class="secondary" onclick="window.print();return false;">Print</button></section>
 </main>
 <footer>GFPF hackathon build - demo rates unless replaced.</footer>

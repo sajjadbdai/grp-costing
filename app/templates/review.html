@@ -1,34 +1,115 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review Inputs - GFPF</title><link rel="stylesheet" href="/static/style.css"></head><body>
-<header><h1>Review Inputs</h1><p>Check every value against the drawing before calculating</p></header>
-<nav class="top no-print"><a href="/">New estimate</a><a href="/demo">Demos</a><a href="/estimates">Saved estimates</a></nav>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Review Inputs - GFPF</title><link rel="stylesheet" href="/static/style.css?v=2"></head><body>
+<div class="toolbar no-print"><a class="tbtn" href="/">New (blank)</a><a class="tbtn" href="/rates">Price list...</a><a class="tbtn" href="/estimates">Saved...</a><a class="tbtn" href="/demo">Demos</a><span class="tspacer"></span><button class="tbtn primary" form="review-form" formaction="/calculate-xlsx">Create Excel costing</button></div>
+<header class="apphead"><h1>GFPF Fiberglass Costing</h1><p>Drawing to Estimate - check every value against the drawing before calculating</p></header>
 <main>
-<ul class="steps"><li>1. Upload or Describe</li><li class="on">2. Review Inputs</li><li>3. Calculate</li><li>4. Compare &amp; Save</li></ul>
 {% if ai_error %}<div class="alert error">{{ai_error}}</div>{% endif %}
 {% if ai_notice %}<div class="alert notice">{{ai_notice}}</div>{% endif %}
+{% if cabin_note %}<div class="alert notice">{{cabin_note}}</div>{% endif %}
 {% if form_errors %}<div class="alert error"><b>Fix before calculating:</b><ul>{% for e in form_errors %}<li>{{e}}</li>{% endfor %}</ul></div>{% endif %}
-<form method="post" action="/calculate">
-<input type="hidden" name="description" value="{{description}}">
+<form method="post" action="/calculate" id="review-form">
 <input type="hidden" name="drawing" value="{{drawing}}">
 <input type="hidden" name="demo_ref" value="{{demo_ref or ''}}">
-<section class="card"><h2>Product shape: {{shape_label}}</h2>
-{% if shape_evidence %}<p class="note">Why: {{shape_evidence}}</p>{% endif %}
-<div class="grid"><label>Shape<select name="shape_id">{% for sid in shape_ids %}<option value="{{sid}}"{% if sid == shape_id %} selected{% endif %}>{{shape_labels[sid]}}</option>{% endfor %}</select></label><label>Quantity<input name="qty" type="number" min="1" value="{{qty}}"></label></div>
-<button class="secondary no-print" formaction="/review-shape">Apply shape</button>
-</section>
+<input type="hidden" name="scan_json" value="{{scan_json}}">
 <div class="review-grid">
 <section class="card"><h2>Drawing</h2>
-{% if drawing %}<img class="drawing" src="/uploads/{{drawing}}" alt="Customer drawing">{% else %}<p class="muted">No drawing uploaded - values come from the description below.</p>{% endif %}
-{% if description %}<h3>Description</h3><p>{{description}}</p>{% endif %}
+{% if drawing %}<p class="note">Drawing file: {{drawing}}</p><img class="drawing" src="/uploads/{{drawing}}" alt="Customer drawing">{% else %}<p class="muted">No drawing uploaded - values come from the description below.</p>{% endif %}
 </section>
-<section class="card"><h2>Values to confirm</h2>
-{% for row in rows %}<label>{{row.label}}{% if row.required %} *{% endif %}<span class="badge src-{{row.source}}">{{row.source}}</span>
-<div class="dimrow"><input name="dim_{{row.key}}" value="{{row.value}}" placeholder="{% if row.required %}required{% else %}optional{% endif %}"{% if row.missing %} class="missing"{% endif %}><select name="unit_{{row.key}}"><option value="mm"{% if row.unit == 'mm' %} selected{% endif %}>mm</option><option value="cm"{% if row.unit == 'cm' %} selected{% endif %}>cm</option><option value="m"{% if row.unit == 'm' %} selected{% endif %}>m</option></select></div>
+<section class="card"><h2>Drawing details (check and correct - all sizes in mm unless noted)</h2>
+<div class="fields">
+<label class="field"><span class="flabel">Product</span><span class="finput"><input name="description" value="{{description}}" placeholder="e.g. GRP Enclosure" title="Product name - detected from the drawing, edit as needed"></span></label>
+<label class="field"><span class="flabel">Drawing no</span><span class="finput"><input name="drawing_no" value="{{drawing_no}}" placeholder="e.g. GFPF#82"></span></label>
+<label class="field"><span class="flabel">Qty (units)</span><span class="finput"><input name="qty" type="number" min="1" value="{{qty}}"></span></label>
+<label class="field"><span class="flabel">Project / client</span><span class="finput"><input name="project" value="{{project}}" placeholder="optional"></span></label>
+</div>
+<h3>Product shape: {{shape_label}}</h3>
+{% if shape_evidence %}<p class="note">Why: {{shape_evidence}}</p>{% endif %}
+<div class="fields"><label class="field"><span class="flabel">Shape</span><span class="finput"><select name="shape_id">{% for sid in shape_ids %}<option value="{{sid}}"{% if sid == shape_id %} selected{% endif %}>{{shape_labels[sid]}}</option>{% endfor %}</select></span></label></div>
+<p><button class="secondary no-print" formaction="/review-shape">Apply shape</button></p>
+<h3>Values to confirm</h3>
+{% for row in rows %}<label class="field"><span class="flabel">{{row.label}}{% if row.required %} *{% endif %}<span class="badge src-{{row.source}}">{{row.source}}</span></span><span class="finput">
+{% if row.kind == 'area' %}<div class="dimrow"><input name="dim_{{row.key}}" value="{{row.value}}" placeholder="required" type="number" step="0.01" min="0"{% if row.missing %} class="missing"{% endif %}><span class="quote">m2<input type="hidden" name="unit_{{row.key}}" value="m2"></span></div>
+{% elif row.kind == 'count' %}<div class="dimrow"><input name="dim_{{row.key}}" value="{{row.value}}" placeholder="0" type="number" step="1" min="0"><span class="quote">nos</span></div>
+{% else %}<div class="dimrow"><input name="dim_{{row.key}}" value="{{row.value}}" placeholder="{% if row.required %}required{% else %}optional{% endif %}"{% if row.missing %} class="missing"{% endif %}><select name="unit_{{row.key}}"><option value="mm"{% if row.unit == 'mm' %} selected{% endif %}>mm</option><option value="cm"{% if row.unit == 'cm' %} selected{% endif %}>cm</option><option value="m"{% if row.unit == 'm' %} selected{% endif %}>m</option></select></div>{% endif %}
 {% if row.mm is not none %}<span class="quote">= {{'%.1f'|format(row.mm)}} mm</span>{% endif %}
 {% if row.quote %}<span class="quote">Evidence: {{row.quote}}</span>{% endif %}
-</label>{% endfor %}
-{% for opt in options %}<label>{{opt.label}}<select name="opt_{{opt.key}}"><option value="yes"{% if opt.value %} selected{% endif %}>Yes</option><option value="no"{% if not opt.value %} selected{% endif %}>No</option></select></label>{% endfor %}
+</span></label>{% endfor %}
+{% for opt in options %}<label class="field"><span class="flabel">{{opt.label}}</span><span class="finput"><select name="opt_{{opt.key}}"><option value="yes"{% if opt.value %} selected{% endif %}>Yes</option><option value="no"{% if not opt.value %} selected{% endif %}>No</option></select></span></label>{% endfor %}
+{% if shape_id == 'cabin' %}<h3>Cabin trims</h3><div class="fields">
+<label class="field"><span class="flabel">Plinth / base height (mm, 0 = none)</span><span class="finput"><input name="optnum_plinth_mm" type="number" step="1" min="0" value="{{plinth_mm}}"></span></label>
+<label class="field"><span class="flabel">Roof overhang (mm each side)</span><span class="finput"><input name="optnum_overhang_mm" type="number" step="1" min="0" value="{{overhang_mm}}"></span></label>
+<label class="field"><span class="flabel">Cornice height (mm, 0 = none)</span><span class="finput"><input name="optnum_cornice_mm" type="number" step="1" min="0" value="{{cornice_mm}}"></span></label>
+<label class="field"><span class="flabel">Insulated (sandwich) walls &amp; roof</span><span class="finput"><select name="opt_sandwich"><option value="yes"{% if sandwich %} selected{% endif %}>Yes</option><option value="no"{% if not sandwich %} selected{% endif %}>No</option></select></span></label>
+</div>{% endif %}
 </section>
 </div>
+{% if scan %}<section class="card"><h2>Drawing scan</h2>
+<p class="note">Read from: {{scan.source}} - check every line against the drawing above.</p>
+<table><tr><th>Data</th><th>Found</th></tr>
+{% if scan.product %}<tr><td>Product name</td><td>{{scan.product}} - prefilled below, edit as needed</td></tr>{% endif %}
+<tr><td>Overall size</td><td>{% if scan.overall %}{{scan.overall.length}} x {{scan.overall.width}} x {{scan.overall.height}} mm{% elif scan.round %}<span class="muted">no LxWxH line - round product, see Diameters below</span>{% else %}<span class="muted">not found - type below</span>{% endif %}</td></tr>
+<tr><td>Internal size</td><td>{% if scan.internal %}{{scan.internal.length}} x {{scan.internal.width}} x {{scan.internal.height}} mm{% else %}<span class="muted">not found</span>{% endif %}</td></tr>
+{% if scan.diameters %}<tr><td>Diameters</td><td>{{scan.diameters|join('; ')}} - pick the product you are costing, type it below</td></tr>{% endif %}
+{% if scan.dome %}<tr><td>Dome guess</td><td>outer {{scan.dome.outer_dia or '?'}} / inner {{scan.dome.inner_dia or '?'}} mm, rise {{scan.dome.rise or '?'}} mm, ring {{scan.dome.ring or '?'}} mm, base {{scan.dome.base_dia or '?'}} mm, skins {{scan.dome.skin_outer or '?'}}/{{scan.dome.skin_inner or '?'}} mm - prefilled below, confirm each</td></tr>{% endif %}
+{% if scan.panels %}<tr><td>GRP thickness</td><td>{{scan.panels|join('; ')}} (per skin, before wastage)</td></tr>{% endif %}
+{% if scan.insulation %}<tr><td>Insulation</td><td>{{scan.insulation|join('; ')}} (not costed - by others or add below)</td></tr>{% endif %}
+{% if scan.steel %}<tr><td>Steel parts</td><td>{{scan.steel|join('; ')}} - weigh and enter steel kg below</td></tr>{% endif %}
+<tr><td>Job quantity</td><td>{% if scan.job_qty %}{{scan.job_qty}} nos{% else %}<span class="muted">not found - check quantity</span>{% endif %}</td></tr>
+<tr><td>Fittings &amp; electrical</td><td>{{scan.n_items}} item(s) detected - see table below</td></tr>
+<tr><td>Openings</td><td>{{scan.openings_m2}} m2 - see table below</td></tr>
+<tr><td>Colors / finishes</td><td>{% if scan.finishes %}{{scan.finishes|join(', ')}} (pigment already allowed below){% else %}<span class="muted">none named</span>{% endif %}</td></tr>
+<tr><td>Supports mentioned</td><td>{% if scan.supports %}{{scan.supports|join(', ')}} - enter steel / plywood below if the drawing needs them{% else %}<span class="muted">none mentioned</span>{% endif %}</td></tr>
+</table>
+{% if scan.text %}<details><summary>Show scanned drawing text</summary><pre class="scantext">{{scan.text}}</pre></details>{% endif %}
+</section>{% endif %}
+<section class="card"><h2>Doors &amp; windows</h2>
+<table><tr><th>Type</th><th>Qty</th><th>Unit</th><th>Rate BD</th><th>Priced as</th><th>Del</th></tr>
+{% for b in door_items %}<tr><td><input name="doorwin_{{loop.index0}}_label" value="{{b.label}}" size="32"><input type="hidden" name="doorwin_{{loop.index0}}_kind" value="{{b.kind}}"><input type="hidden" name="doorwin_{{loop.index0}}_basis" value="{{b.basis}}"></td><td><input name="doorwin_{{loop.index0}}_qty" type="number" step="0.01" min="0" value="{{b.qty}}"></td><td><input name="doorwin_{{loop.index0}}_unit" value="{{b.unit}}" size="4"></td><td><input name="doorwin_{{loop.index0}}_rate" type="number" step="0.001" min="0" value="{{b.rate}}"></td><td class="muted">{{b.basis}}</td><td><input name="doorwin_{{loop.index0}}_del" type="checkbox" value="1" title="Delete this row"></td></tr>{% endfor %}
+{% for j in range(door_items|length, door_items|length + door_blanks) %}<tr><td><input name="doorwin_{{j}}_label" value="" size="32" placeholder="Add door/window"><input type="hidden" name="doorwin_{{j}}_kind" value="door"><input type="hidden" name="doorwin_{{j}}_basis" value=""></td><td><input name="doorwin_{{j}}_qty" type="number" step="0.01" min="0" value=""></td><td><input name="doorwin_{{j}}_unit" value="no" size="4"></td><td><input name="doorwin_{{j}}_rate" type="number" step="0.001" min="0" value=""></td><td></td><td></td></tr>{% endfor %}
+</table>
+<input type="hidden" name="doorwin_count" value="{{door_items|length + door_blanks}}">
+<p><button class="secondary no-print" formaction="/review-rows" name="add" value="door">Add</button> <span class="note">Tick Del to drop a row - it applies on Calculate. Sizes below deduct from the shell.</span></p>
+<h3>Openings (deduct from the shell area)</h3>
+<table><tr><th>Opening</th><th>Width (m)</th><th>Height (m)</th><th>Qty</th><th>Del</th></tr>
+{% for o in openings_detail %}<tr><td><input name="opening_{{loop.index0}}_label" value="{{o.label}}" size="32"></td><td><input name="opening_{{loop.index0}}_w" type="number" step="0.01" min="0" value="{{o.width_m}}"></td><td><input name="opening_{{loop.index0}}_h" type="number" step="0.01" min="0" value="{{o.height_m}}"></td><td><input name="opening_{{loop.index0}}_qty" type="number" step="1" min="0" value="{{o.qty}}"></td><td><input name="opening_{{loop.index0}}_del" type="checkbox" value="1" title="Delete this row"></td></tr>{% endfor %}
+{% for j in range(openings_detail|length, openings_detail|length + open_blanks) %}<tr><td><input name="opening_{{j}}_label" value="" size="32" placeholder="Add opening"></td><td><input name="opening_{{j}}_w" type="number" step="0.01" min="0" value=""></td><td><input name="opening_{{j}}_h" type="number" step="0.01" min="0" value=""></td><td><input name="opening_{{j}}_qty" type="number" step="1" min="0" value=""></td><td></td></tr>{% endfor %}
+</table>
+<input type="hidden" name="opening_count" value="{{openings_detail|length + open_blanks}}">
+<p><button class="secondary no-print" formaction="/review-rows" name="add" value="opening">Add</button> <span class="note">Openings total {{openings_m2}} m2.</span></p>
+</section>
+<section class="card"><h2>Electrical &amp; other bought-in items</h2>
+<p class="note">{{bought_note}}</p>
+<table><tr><th>As written on the drawing</th><th>Qty</th><th>Unit</th><th>Rate BD</th><th>Priced as</th><th>By client</th><th>Del</th></tr>
+{% for b in elec_items %}<tr><td><input name="boughtin_{{loop.index0}}_label" value="{{b.label}}" size="32"><input type="hidden" name="boughtin_{{loop.index0}}_kind" value="{{b.kind}}"><input type="hidden" name="boughtin_{{loop.index0}}_basis" value="{{b.basis}}"></td><td><input name="boughtin_{{loop.index0}}_qty" type="number" step="0.01" min="0" value="{{b.qty}}"></td><td><input name="boughtin_{{loop.index0}}_unit" value="{{b.unit}}" size="4"></td><td><input name="boughtin_{{loop.index0}}_rate" type="number" step="0.001" min="0" value="{{b.rate}}"></td><td class="muted">{{b.basis}}</td><td><input name="boughtin_{{loop.index0}}_client" type="checkbox" value="1"{% if b.by_client %} checked{% endif %} title="By client - not priced by us"></td><td><input name="boughtin_{{loop.index0}}_del" type="checkbox" value="1" title="Delete this row"></td></tr>{% endfor %}
+{% for j in range(elec_items|length, elec_items|length + bought_blanks) %}<tr><td><input name="boughtin_{{j}}_label" value="" size="32" placeholder="Add item"><input type="hidden" name="boughtin_{{j}}_kind" value="other"><input type="hidden" name="boughtin_{{j}}_basis" value=""></td><td><input name="boughtin_{{j}}_qty" type="number" step="0.01" min="0" value=""></td><td><input name="boughtin_{{j}}_unit" value="no" size="4"></td><td><input name="boughtin_{{j}}_rate" type="number" step="0.001" min="0" value=""></td><td></td><td></td><td></td></tr>{% endfor %}
+</table>
+<input type="hidden" name="boughtin_count" value="{{elec_items|length + bought_blanks}}">
+<p><button class="secondary no-print" formaction="/review-rows" name="add" value="boughtin">Add</button> <span class="note">'By client' = not priced by us.</span></p>
+</section>
+<section class="card"><h2>Laminate, mould and supports</h2><div class="fields">
+<label class="field"><span class="flabel">Laminate schedule</span><span class="finput"><select name="layup">{% for sid in layup_ids %}<option value="{{sid}}"{% if sid == layup %} selected{% endif %}>{{layup_labels[sid]}}</option>{% endfor %}</select></span></label>
+<label class="field"><span class="flabel">Gelcoat</span><span class="finput"><select name="gelcoat"><option value="auto"{% if gelcoat == 'auto' %} selected{% endif %}>Auto (schedule default)</option><option value="yes"{% if gelcoat == 'yes' %} selected{% endif %}>Yes</option><option value="no"{% if gelcoat == 'no' %} selected{% endif %}>No</option></select></span></label>
+<label class="field"><span class="flabel">Resin</span><span class="finput"><select name="resin_type">{% for rid, rinfo in resin_types.items() %}<option value="{{rid}}"{% if rid == resin_type %} selected{% endif %}>{{rinfo[0]}}</option>{% endfor %}</select></span></label>
+<label class="field"><span class="flabel">Mould</span><span class="finput"><select name="mould_option"><option value="have"{% if mould_option == 'have' %} selected{% endif %}>Have mould (no cost)</option><option value="need"{% if mould_option == 'need' %} selected{% endif %}>Need new mould</option></select></span></label>
+<label class="field"><span class="flabel">Mould cost (BD)</span><span class="finput"><input name="mould_cost" type="number" step="0.001" min="0" value="{{mould_cost}}"></span></label>
+<label class="field"><span class="flabel">Mould life (pieces, blank = batch)</span><span class="finput"><input name="mould_life_qty" type="number" min="1" step="1" value="{{mould_life_qty}}"></span></label>
+<label class="field"><span class="flabel">Bonding paste / filler (kg/pc)</span><span class="finput"><input name="paste_kg" type="number" step="0.1" min="0" value="{{paste_kg}}"></span></label>
+<label class="field"><span class="flabel">Plywood supports (m2/pc)</span><span class="finput"><input name="plywood_m2" type="number" step="0.01" min="0" value="{{plywood_m2}}"></span></label>
+<label class="field"><span class="flabel">Steel supports (kg/pc)</span><span class="finput"><input name="steel_kg" type="number" step="0.01" min="0" value="{{steel_kg}}"></span></label>
+<label class="field"><span class="flabel">Hardware (BD/pc)</span><span class="finput"><input name="hardware_cost" type="number" step="0.01" min="0" value="{{hardware_cost}}"></span></label>
+</div>
+{% if layup != 'classic' and layup_mm %}<p class="note">Selected schedule cures at ~{{'%.1f'|format(layup_mm)}} mm - enter that as the target thickness above (over 15% off warns at calculate).</p>{% endif %}
+<p class="note">New-mould cost spreads over its life quantity (blank = this batch). Supports and hardware are charged per piece.</p>
+</section>
+<section class="card"><h2>Extras, delivery and pricing</h2><div class="fields">
+<label class="field"><span class="flabel">Paint / topcoat</span><span class="finput"><select name="paint"><option value="no"{% if not paint %} selected{% endif %}>No</option><option value="yes"{% if paint %} selected{% endif %}>Yes (0.15 kg/m2)</option></select></span></label>
+<label class="field"><span class="flabel">Extra laminate area for stiffeners, nozzles, flanges (m2/pc)</span><span class="finput"><input name="extra_area_m2" type="number" step="0.01" min="0" value="{{extra_area_m2}}"></span></label>
+<label class="field"><span class="flabel">Delivery, packing, installation (BD/pc)</span><span class="finput"><input name="delivery_bd" type="number" step="0.01" min="0" value="{{delivery_bd}}"></span></label>
+<label class="field"><span class="flabel">Testing, inspection, certification (BD/pc)</span><span class="finput"><input name="testing_bd" type="number" step="0.01" min="0" value="{{testing_bd}}"></span></label>
+<label class="field"><span class="flabel">Margin / markup (%)</span><span class="finput"><input name="markup_pct" type="number" step="0.01" min="0" value="{{markup_pct}}"></span></label>
+<label class="field"><span class="flabel">Tax / duties on selling (%)</span><span class="finput"><input name="tax_pct" type="number" step="0.01" min="0" value="{{tax_pct}}"></span></label>
+</div>
+<p class="note">Leave at zero/No to keep the standard cost estimate. Anything entered here moves from the excluded list into the totals below.</p>
+</section>
 {% if missing or ambiguities or questions or notes %}
 <section class="card"><h2>Needs your attention</h2>
 {% if missing %}<h3>Missing</h3><ul>{% for m in missing %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
@@ -37,21 +118,12 @@
 {% if notes %}<h3>Notes</h3><ul>{% for m in notes %}<li>{{m}}</li>{% endfor %}</ul>{% endif %}
 </section>
 {% endif %}
-<section class="card"><h2>Recipe and rates</h2><div class="grid">
-<label>Density (kg/m3)<input name="recipe_density_kg_m3" type="number" step="0.01" value="{{recipe.density_kg_m3}}"></label>
-<label>Resin %<input name="recipe_resin_pct" type="number" step="0.01" value="{{recipe.resin_pct}}"></label>
-<label>Fiber %<input name="recipe_fiber_pct" type="number" step="0.01" value="{{recipe.fiber_pct}}"></label>
-<label>MEKP %<input name="recipe_mekp_pct" type="number" step="0.01" value="{{recipe.mekp_pct}}"></label>
-<label>Wastage %<input name="recipe_wastage_pct" type="number" step="0.01" value="{{recipe.wastage_pct}}"></label>
-<label>Labour hrs/pc<input name="recipe_labour_hours" type="number" step="0.1" value="{{recipe.labour_hours}}"></label>
-<label>Overhead %<input name="recipe_overhead_pct" type="number" step="0.01" value="{{recipe.overhead_pct}}"></label>
-<label>Resin (BD/kg)<input name="rate_resin" type="number" step="0.001" value="{{rates.resin}}"></label>
-<label>Fiber (BD/kg)<input name="rate_fiber" type="number" step="0.001" value="{{rates.fiber}}"></label>
-<label>MEKP (BD/kg)<input name="rate_mekp" type="number" step="0.001" value="{{rates.mekp}}"></label>
-<label>Labour (BD/hr)<input name="rate_labour" type="number" step="0.001" value="{{rates.labour}}"></label>
-<label>Consumables (BD/pc)<input name="rate_consumables" type="number" step="0.001" value="{{rates.consumables}}"></label>
+<section class="card"><h2>Recipe and rates</h2><div class="fields">
+{% for key, label in recipe_labels.items() %}<label class="field"><span class="flabel">{{label}}</span><span class="finput"><input name="recipe_{{key}}" type="number" step="0.01" value="{{recipe[key]}}"></span></label>{% endfor %}
+{% for key, label in rate_labels.items() %}<label class="field"><span class="flabel">{{label}}</span><span class="finput"><input name="rate_{{key}}" type="number" step="0.001" value="{{rates[key]}}"></span></label>{% endfor %}
 </div>
-<button>Confirm &amp; Calculate</button></section>
+{% if labour_note %}<p class="note">{{labour_note}}</p>{% endif %}
+<button>Confirm &amp; Calculate</button> <button class="secondary no-print" formaction="/calculate-xlsx">Create Excel costing</button></section>
 </form>
 {% if demo_expected %}<section class="card"><h2>Demo reference (expected values)</h2><details open><summary>Show expected extraction for evaluation</summary>
 <table><tr><th>Field</th><th>Expected</th><th>Source</th></tr>
@@ -61,5 +133,32 @@
 {% if demo_expected.ambiguities %}<p><b>Should flag:</b> {{demo_expected.ambiguities|join(' | ')}}</p>{% endif %}
 </details></section>{% endif %}
 </main>
-<footer>GFPF hackathon build - demo rates unless replaced.</footer>
+<div class="livebar no-print"><div class="live-main" id="live-main">Live totals appear here once the required values are filled.</div><div class="live-sub" id="live-sub"></div><div class="live-status" id="live-status">{% if scan %}Read from {{scan.source}} - check every value against the drawing.{% endif %}</div></div>
+<footer>GFPF fiberglass costing - demo rates unless replaced. Estimates only.</footer>
+<script>
+(function () {
+  var form = document.getElementById('review-form');
+  var main = document.getElementById('live-main');
+  var sub = document.getElementById('live-sub');
+  if (!form || !main) return;
+  var timer = null;
+  function fmt(n) { return Number(n).toFixed(3); }
+  function refresh() {
+    var data = new FormData(form);
+    var params = new URLSearchParams();
+    data.forEach(function (v, k) { params.append(k, v); });
+    fetch('/api/totals', {method: 'POST', body: params,
+      headers: {'Accept': 'application/json'}}).then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j.ok) { main.textContent = j.error || 'Fill the required values.'; sub.textContent = ''; return; }
+      var perUnit = j.qty ? (j.selling / j.qty) : 0;
+      var vat = j.tax_pct ? ' (+' + j.tax_pct + '% VAT = BD ' + fmt(j.selling_inc) + ')' : ' (no VAT)';
+      main.textContent = 'Selling price BD ' + fmt(perUnit) + ' per unit  ·  ' + j.qty + ' units = BD ' + fmt(j.selling) + vat;
+      sub.textContent = 'Per unit: GRP materials ' + fmt(j.grp) + ' · bought-ins ' + fmt(j.bought) + ' · labour ' + fmt(j.labour) + ' (' + j.labour_hours + ' h) · mould share + transport ' + fmt(j.mould_trans) + ' · direct cost ' + fmt(j.direct) + '  |  GRP area ' + j.area + ' m2, laminate ≈ ' + j.laminate + ' kg';
+    }).catch(function () { main.textContent = 'Live totals unavailable.'; sub.textContent = ''; });
+  }
+  form.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(refresh, 500); });
+  refresh();
+})();
+</script>
 </body></html>
