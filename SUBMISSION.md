@@ -30,8 +30,10 @@ the engine. Without an API key the app still runs end to end in manual mode.
 
 ## Why Meta models, and how
 
-- **Muse (Meta Model API)** is the interpretation layer: it reads drawings and free-text
-  descriptions and turns them into a structured shape + dimension proposal.
+- **Muse (Meta's model)** is the interpretation layer: it reads drawings and free-text
+  descriptions and turns them into a structured shape + dimension proposal. The model is
+  reached through an OpenAI-compatible endpoint, so base URL, model id and format are all
+  configurable (`/healthz` shows exactly which one is live).
 - **Muse Code** built this application: the FastAPI service, the deterministic costing
   engine, the templates and the test suite were written with it in the agent workflow.
 - The model is called **server-side only** (key from environment, never logged, never sent
@@ -76,7 +78,7 @@ quote actually needs to be defensible.
 
 ```bash
 pip install -r requirements.txt
-MODEL_API_KEY=... MODEL_API_BASE=https://api.meta.ai/v1 MODEL_ID=muse-wonder-1.0 \
+MODEL_API_KEY=... MODEL_ID=meta-models/muse-spark-open MODEL_API_FORMAT=chat \
   uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 

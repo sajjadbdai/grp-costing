@@ -10,6 +10,8 @@ reviewable GRP material and cost estimate.
 
 Workflow: **Upload or Describe -> Review Inputs -> Calculate -> Compare & Save**
 
+![GFPF costing app](docs-ui.png)
+
 ## Quick start (local)
 
 ```powershell
