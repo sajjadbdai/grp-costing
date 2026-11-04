@@ -45,10 +45,13 @@ EXTRACTION_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "field": {"type": "string"},
+                    # Enum-constrained so structured-output providers cannot
+                    # return empty or invented field names (seen on some
+                    # hosted models: dims arrived with "field": "").
+                    "field": {"type": "string", "enum": list(DIM_FIELDS)},
                     "value": {"type": ["number", "null"]},
                     "unit": {"type": ["string", "null"]},
-                    "source": {"type": "string"},
+                    "source": {"type": "string", "enum": list(SOURCES)},
                     "quote": {"type": "string"},
                 },
                 "required": ["field", "source"],
@@ -292,7 +295,11 @@ def extract_json(text):
             return json.loads(cleaned[start : end + 1])
         except ValueError:
             pass
-    raise MuseError("The model reply was not usable data. Nothing was calculated.")
+    # Include what the model DID return (key-free: replies never carry the
+    # key) so a hosted failure can be diagnosed from the UI error alone.
+    snippet = re.sub(r"\s+", " ", cleaned)[:200]
+    raise MuseError("The model reply was not usable data (got: %r). "
+                    "Nothing was calculated." % snippet)
 
 
 def _call(config, system_text, user_text, image=None, schema=None, max_tokens=16000,
@@ -354,15 +361,31 @@ def normalize_extraction(raw, shape_hint="auto"):
         else:
             shape = "unknown"
     dims = []
-    for entry in (raw or {}).get("dims", []) or []:
+    raw_dims = (raw or {}).get("dims", []) or []
+    if isinstance(raw_dims, dict):
+        converted = []
+        for key, entry in raw_dims.items():
+            if isinstance(entry, dict):
+                item = dict(entry)
+                item.setdefault("name", key)
+                converted.append(item)
+            else:
+                converted.append({"name": key, "value": entry})
+        raw_dims = converted
+    for entry in raw_dims:
         if not isinstance(entry, dict):
             continue
-        field = str(entry.get("field", "")).strip()
+        # Providers differ on the key name: 'field' (schema) vs 'name'
+        # (seen on hosted Muse). Accept every alias before giving up.
+        field = str(entry.get("field") or entry.get("name")
+                    or entry.get("dimension") or entry.get("key")
+                    or "").strip().lower()
         if field not in DIM_FIELDS:
             notes.append("Ignored unknown field %r." % field)
             continue
         try:
-            value = float(entry.get("value")) if entry.get("value") is not None else None
+            raw_value = entry.get("value", entry.get("val"))
+            value = float(raw_value) if raw_value is not None else None
         except (TypeError, ValueError):
             value = None
         if value is not None and value <= 0:
@@ -381,7 +404,7 @@ def normalize_extraction(raw, shape_hint="auto"):
             if entry.get("unit") not in (None, ""):
                 notes.append("Unknown unit %r for %s; assumed mm." % (entry.get("unit"), field))
             unit = "mm" if value is not None else None
-        source = str(entry.get("source", "") or "").strip().lower()
+        source = str(entry.get("source") or entry.get("origin") or "").strip().lower()
         if source not in SOURCES:
             source = "description"
         dims.append(
@@ -507,6 +530,33 @@ Each note states the basis in under 12 words (e.g. "Gulf 2025 industrial"). Repl
 only, matching the requested schema. No prose outside the JSON."""
 
 
+def _price_rows(raw, keys):
+    """Accept either shape the model may return.
+
+    Some hosted providers ignore the requested array-of-objects schema and
+    answer with a mapping keyed by rate-book key instead:
+        {"prices": [{...}]}            (requested shape)
+        {"resin": {"price": 0.85}, ...} (also accepted)
+    Returning [] for anything else keeps the caller's behaviour unchanged.
+    """
+    if not isinstance(raw, dict):
+        return []
+    rows = raw.get("prices")
+    if isinstance(rows, list):
+        return rows
+    rows = []
+    for key, value in raw.items():
+        name = key.strip().lower() if isinstance(key, str) else None
+        if name not in keys:
+            continue
+        if isinstance(value, dict):
+            rows.append({"key": name, "price": value.get("price"),
+                         "note": value.get("note", "")})
+        elif isinstance(value, (int, float)):
+            rows.append({"key": name, "price": value, "note": ""})
+    return rows
+
+
 def suggest_prices(items, config=None):
     """Today's market prices for rate-book items from the model.
 
@@ -520,16 +570,39 @@ def suggest_prices(items, config=None):
     lines = ["%s | %s" % (key, label) for key, label in items]
     user_text = ("Rate book (key | material with unit):\n" + "\n".join(lines)
                  + "\nReturn the prices JSON now.")
-    data = _call(config, PRICES_SYSTEM, user_text, None, PRICES_SCHEMA,
+    # Per-request schema: the key enum pins each row to a real rate-book
+    # key so weaker models cannot return empty or invented keys.
+    schema = {
+        "type": "object",
+        "properties": {
+            "prices": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string", "enum": keys},
+                        "price": {"type": ["number", "null"]},
+                        "note": {"type": "string"},
+                    },
+                    "required": ["key", "price"],
+                },
+            },
+        },
+        "required": ["prices"],
+    }
+    data = _call(config, PRICES_SYSTEM, user_text, None, schema,
                  max_tokens=4000, temperature=0.0,
                  reasoning_effort=config.reasoning_effort)
     raw = extract_json(extract_output_text(data))
-    entries = raw.get("prices") if isinstance(raw, dict) else None
+    entries = _price_rows(raw, keys)
     found = {}
     for entry in entries or []:
         if not isinstance(entry, dict):
             continue
         key = entry.get("key")
+        if isinstance(key, str) and key not in keys \
+                and key.strip().lower() in keys:
+            key = key.strip().lower()
         if key not in keys or key in found:
             continue
         price = entry.get("price")
