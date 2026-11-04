@@ -85,3 +85,11 @@ module, units module, Muse client + prompts, review/compare/save/revise flow,
 upload + PDF handling, JSON revision store, demo cases + generated drawings,
 print CSS, static-mount and validation fixes, 60 unit checks, live smoke
 script (throwaway, not shipped), README rewrite and this file.
+
+## Update (Nov 1-3, still in the event window)
+
+- Dome/sphere take-off from diameters, GRP cabin mode, material-aware
+  door detection (GRP unless aluminium/steel stated), automatic product
+  naming, in-page AI price check with previous/new columns.
+- Review UI rebuilt side-by-side with live totals and one-click Excel.
+- Suite now 223 checks; fresh-install verified (clean venv, all green).

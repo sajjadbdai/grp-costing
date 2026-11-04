@@ -76,6 +76,13 @@ class ParseTests(unittest.TestCase):
         with self.assertRaises(muse_client.MuseError):
             muse_client.extract_json("   ")
 
+    def test_unusable_reply_quotes_snippet(self):
+        with self.assertRaises(muse_client.MuseError) as raised:
+            muse_client.extract_json("Sorry, I cannot give prices today.")
+        self.assertIn("not usable data", str(raised.exception))
+        self.assertIn("Sorry, I cannot give prices today.",
+                      str(raised.exception))
+
     def test_responses_text_shape(self):
         data = {"output": [{"content": [{"type": "output_text", "text": "hello"}]}]}
         self.assertEqual(muse_client.extract_output_text(data), "hello")
@@ -160,6 +167,14 @@ class NormalizeTests(unittest.TestCase):
              "options": {"closed_bottom": "yes", "closed_top": "open"}})
         self.assertEqual(review["options"], {"closed_bottom": True, "closed_top": False})
 
+    def test_field_matches_case_insensitively(self):
+        review = muse_client.normalize_extraction(
+            {"shape": "panel", "dims": [
+                {"field": "Length", "value": 1200, "unit": "mm",
+                 "source": "description", "quote": "1200"}]})
+        self.assertEqual(review["dims"][0]["field"], "length")
+        self.assertEqual(review["dims"][0]["value"], 1200.0)
+
 
 class ConfigTests(unittest.TestCase):
     def test_unconfigured_without_key(self):
@@ -238,6 +253,30 @@ class SuggestPricesTests(unittest.TestCase):
                         return_value=self._reply("   ")):
             with self.assertRaises(muse_client.MuseError):
                 muse_client.suggest_prices(self.ITEMS, self._config())
+
+    def test_key_matches_case_insensitively(self):
+        payload = {"prices": [{"key": "Resin", "price": 0.9,
+                                "note": "gulf"}]}
+        with mock.patch("app.muse_client._post_with_retry",
+                        return_value=self._reply(json.dumps(payload))):
+            found = muse_client.suggest_prices(self.ITEMS, self._config())
+        self.assertEqual(found["resin"], {"price": 0.9, "note": "gulf"})
+
+    def test_request_schema_pins_key_enum(self):
+        payload = {"prices": []}
+        with mock.patch("app.muse_client._call",
+                        return_value=self._reply(json.dumps(payload))) as call:
+            muse_client.suggest_prices(self.ITEMS, self._config())
+        schema = call.call_args[0][4]
+        enum = (schema["properties"]["prices"]["items"]
+                ["properties"]["key"]["enum"])
+        self.assertEqual(enum, ["resin", "steel"])
+
+    def test_extraction_schema_pins_field_enums(self):
+        dims = (muse_client.EXTRACTION_SCHEMA["properties"]["dims"]
+                ["items"]["properties"])
+        self.assertEqual(dims["field"]["enum"], list(muse_client.DIM_FIELDS))
+        self.assertEqual(dims["source"]["enum"], list(muse_client.SOURCES))
 
 
 if __name__ == "__main__":

@@ -66,7 +66,7 @@ want AI extraction inside the container.
 .venv\Scripts\python -m unittest discover -s tests
 ```
 
-223 checks: geometry, costing regression, laminate schedules, labour
+228 checks: geometry, costing regression, laminate schedules, labour
 estimating, extras and pricing, bought-in schedule, PDF and Excel export,
 units, store revisions, material prices, product-name detection, review and
 rates page rendering, and the Muse client (mocked - no network).
@@ -98,6 +98,10 @@ factory prices. Updates are saved on the server and become the defaults for
 new estimates; saved estimates keep their own snapshots and never change.
 **Check online prices** fetches AI-suggested market rates into a New-rate
 column - press **Update** on the rows you accept, then **Save prices**.
+The request pins every row to its rate-book key via a JSON-schema enum so
+weaker hosted models cannot return empty or invented keys; if the reply is
+still unusable, the error quotes the first 200 characters of what the model
+returned so the failure can be diagnosed from the UI alone.
 
 ## Drawings
 

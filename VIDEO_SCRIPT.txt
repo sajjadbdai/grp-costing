@@ -1,0 +1,51 @@
+DEMO VIDEO SCRIPT (~2:30)
+GFPF Drawing to Estimate — Meta Global AI Developer Hackathon 2026
+Indie track / Push the Frontier
+
+------------------------------------------------------------
+0:00-0:20 — THE PROBLEM (show a shop drawing on screen)
+"Custom fiberglass quotes take hours by hand: reading drawings,
+measuring areas, looking up laminate recipes, typing spreadsheets.
+Watch this enclosure drawing become a priced estimate."
+
+------------------------------------------------------------
+0:20-0:50 — UPLOAD + AI REVIEW (upload ENCLOSURE.pdf, no description)
+Show the review page: product name detected, dims prefilled, door +
+electrical tables filled, drawing scan panel.
+"Muse read the drawing — diameters, thicknesses, doors, wiring —
+and every value shows its source. Anything unclear is flagged, and
+I can correct any field before calculating."
+
+------------------------------------------------------------
+0:50-1:20 — CALCULATE (scroll fields, press Confirm & Calculate)
+Show the result sheet: GRP area, laminate kg, per-piece and batch
+totals, assumptions and exclusions.
+"Geometry, laminate, labour and money are deterministic code — the
+AI proposes, the code calculates, the human confirms."
+
+------------------------------------------------------------
+1:20-1:50 — EXCEL EXPORT (Create Excel costing, open the workbook)
+Change one yellow cell, show totals updating live.
+"One click gives a live-formula Excel workbook the estimator owns —
+change any yellow cell and the whole sheet reprices itself."
+
+------------------------------------------------------------
+1:50-2:10 — PRICE CHECK (Material prices page)
+Press Check online prices, New-rate column fills, Update one row,
+press Save prices.
+"Rates stay current with an in-app online price check — and new
+prices apply to new estimates only. Saved estimates never change."
+
+------------------------------------------------------------
+2:10-2:30 — CLOSE (back on the result sheet)
+"AI proposes, code calculates, human confirms. From drawing to
+signed costing sheet in minutes — built with Muse on the Meta
+Model API."
+
+------------------------------------------------------------
+RECORDING TIPS
+- 1080p screen capture, browser zoom 100-110%.
+- No API keys on screen at any point (keys stay server-side).
+- Keep the server terminal out of frame, or show one clean start.
+- Do one rehearsal run first so uploads and numbers are familiar.
+- Export/unlist on YouTube or Loom and paste the link in the entry.
